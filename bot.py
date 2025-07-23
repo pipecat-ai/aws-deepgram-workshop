@@ -10,13 +10,14 @@ import aiohttp
 from dotenv import load_dotenv
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import LLMMessagesFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
-from pipecat.services.cartesia.tts import CartesiaTTSService
-from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.services.aws.llm import AWSBedrockLLMService
+from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
+from pipecat.services.deepgram.tts import DeepgramTTSService
+from pipecat.transcriptions.language import Language
 from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecatcloud.agent import DailySessionArguments
 
@@ -32,7 +33,9 @@ if LOCAL_RUN:
     try:
         from local_runner import configure
     except ImportError:
-        logger.error("Could not import local_runner module. Local development mode may not work.")
+        logger.error(
+            "Could not import local_runner module. Local development mode may not work."
+        )
 
 
 async def main(transport: DailyTransport):
@@ -41,11 +44,26 @@ async def main(transport: DailyTransport):
     Args:
         transport: The DailyTransport instance
     """
-    tts = CartesiaTTSService(
-        api_key=os.getenv("CARTESIA_API_KEY"), voice_id="71a7ad14-091c-4e8e-a314-022ece01c121"
+
+    stt = DeepgramSTTService(
+        api_key=os.getenv("DEEPGRAM_API_KEY"),
+        live_options=LiveOptions(
+            model="nova-3-general", language=Language.EN, smart_format=True
+        ),
     )
 
-    llm = OpenAILLMService(api_key=os.getenv("OPENAI_API_KEY"), model="gpt-4o")
+    tts = DeepgramTTSService(
+        api_key=os.getenv("DEEPGRAM_API_KEY"),
+        voice="aura-2-andromeda-en",
+        sample_rate=24000,
+        encoding="linear16",
+    )
+
+    llm = AWSBedrockLLMService(
+        aws_region="us-west-2",
+        model="us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        params=AWSBedrockLLMService.InputParams(temperature=0.8, latency="optimized"),
+    )
 
     messages = [
         {
@@ -60,6 +78,7 @@ async def main(transport: DailyTransport):
     pipeline = Pipeline(
         [
             transport.input(),
+            stt,
             context_aggregator.user(),
             llm,
             tts,
@@ -82,14 +101,14 @@ async def main(transport: DailyTransport):
     async def on_first_participant_joined(transport, participant):
         logger.info("First participant joined: {}", participant["id"])
         await transport.capture_participant_transcription(participant["id"])
-        # Kick off the conversation.
+        # Kick off the conversation. Claude wants a user frame first.
         messages.append(
             {
-                "role": "system",
-                "content": "Please start with 'Hello World' and introduce yourself to the user.",
+                "role": "user",
+                "content": "Please start with 'Hello World' and very briefly introduce yourself.",
             }
         )
-        await task.queue_frames([LLMMessagesFrame(messages)])
+        await task.queue_frames([context_aggregator.user().get_context_frame()])
 
     @transport.event_handler("on_participant_left")
     async def on_participant_left(transport, participant, reason):
@@ -119,7 +138,6 @@ async def bot(args: DailySessionArguments):
         DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            transcription_enabled=True,
             vad_analyzer=SileroVADAnalyzer(),
         ),
     )
