@@ -1,0 +1,3 @@
+pipecatcloud
+pipecat-ai[aws,daily,deepgram,silero]
+python-dotenv~=1.0.1
