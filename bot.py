@@ -5,11 +5,14 @@
 #
 
 import os
+import sys
 
 import aiohttp
 from dotenv import load_dotenv
 from loguru import logger
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -17,12 +20,16 @@ from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.services.aws.llm import AWSBedrockLLMService
 from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
 from pipecat.services.deepgram.tts import DeepgramTTSService
+from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transcriptions.language import Language
 from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecatcloud.agent import DailySessionArguments
 
+from strands_agent import StrandsAgentProcessor, StrandsAgentRequestFrame
+
 # Load environment variables
 load_dotenv(override=True)
+logger.add(sys.stderr, level="DEBUG")
 
 # Check if we're in local development mode
 LOCAL_RUN = os.getenv("LOCAL_RUN")
@@ -52,7 +59,14 @@ async def main(transport: DailyTransport):
         ),
     )
 
-    tts = DeepgramTTSService(
+    main_tts = DeepgramTTSService(
+        api_key=os.getenv("DEEPGRAM_API_KEY"),
+        voice="aura-2-arcas-en",
+        sample_rate=24000,
+        encoding="linear16",
+    )
+
+    specialist_tts = DeepgramTTSService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         voice="aura-2-andromeda-en",
         sample_rate=24000,
@@ -61,27 +75,60 @@ async def main(transport: DailyTransport):
 
     llm = AWSBedrockLLMService(
         aws_region="us-west-2",
-        model="us.anthropic.claude-3-5-haiku-20241022-v1:0",
-        params=AWSBedrockLLMService.InputParams(temperature=0.8, latency="optimized"),
+        model="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
     )
 
     messages = [
         {
             "role": "system",
-            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way.",
+            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way. Keep your responses VERY BRIEF. Brevity is the soul of wit. When making function calls, respond with only the function call block and no explanatory text, commentary, or narration. Do not announce what you're doing or explain why you're calling the function. Just say exactly this: 'one sec'.",
         },
     ]
 
-    context = OpenAILLMContext(messages)
+    async def handle_weather_questions(params: FunctionCallParams, query: str):
+        """
+        Call this function if the user asks a question about the weather.
+
+        Args:
+            query (str): The user's query, e.g. "What's the weather where the Golden Gate Bridge is?".
+        """
+
+        logger.info(f"!!! handle_weather_questions: {query}")
+        # Run in a background thread
+        # (Otherwise the agent blocks the event loop; one effect of that is that we don't hear
+        # "let me check on that" until the agent finishes)
+        # loop = asyncio.get_running_loop()
+        # result = await loop.run_in_executor(None, strands_agent, query)
+        await strands_agent_processor.queue_frame(StrandsAgentRequestFrame(query))
+        # This return result isn't "magic"; the LLM is smart enough to interpret it as something
+        # to say to the user
+        await params.result_callback(
+            {"message": "Tell the user that the specialist will answer the question."}
+        )
+
+    llm.register_direct_function(handle_weather_questions)
+    tools = ToolsSchema(standard_tools=[handle_weather_questions])
+
+    context = OpenAILLMContext(messages, tools)
     context_aggregator = llm.create_context_aggregator(context)
+
+    strands_agent_processor = StrandsAgentProcessor()
 
     pipeline = Pipeline(
         [
-            transport.input(),
-            stt,
-            context_aggregator.user(),
-            llm,
-            tts,
+            ParallelPipeline(
+                [
+                    transport.input(),
+                    stt,
+                    context_aggregator.user(),
+                    llm,
+                    main_tts,
+                ],
+                [
+                    strands_agent_processor,
+                    specialist_tts,
+                ],
+            ),
             transport.output(),
             context_aggregator.assistant(),
         ]
@@ -105,7 +152,7 @@ async def main(transport: DailyTransport):
         messages.append(
             {
                 "role": "user",
-                "content": "Please start with 'Hello World' and very briefly introduce yourself.",
+                "content": "Please say exactly this: 'Hello World! What can I do for you?'",
             }
         )
         await task.queue_frames([context_aggregator.user().get_context_frame()])
@@ -138,6 +185,7 @@ async def bot(args: DailySessionArguments):
         DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
+            enable_transcription=False,
             vad_analyzer=SileroVADAnalyzer(),
         ),
     )
