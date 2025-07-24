@@ -1,6 +1,6 @@
-agent_name = "my-first-agent"
-image = "your-username/my-first-agent:0.1"
-secret_set = "my-first-agent-secrets"
+agent_name = "aws-deepgram-workshop"
+image = "chadbailey59/aws-deepgram-workshop:0.1"
+secret_set = "aws-deepgram-workshop-secrets"
 
 [scaling]
 	min_agents = 0

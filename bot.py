@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 from loguru import logger
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -24,8 +23,6 @@ from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transcriptions.language import Language
 from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecatcloud.agent import DailySessionArguments
-
-from strands_agent import StrandsAgentProcessor, StrandsAgentRequestFrame
 
 # Load environment variables
 load_dotenv(override=True)
@@ -59,16 +56,9 @@ async def main(transport: DailyTransport):
         ),
     )
 
-    main_tts = DeepgramTTSService(
+    tts = DeepgramTTSService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         voice="aura-2-arcas-en",
-        sample_rate=24000,
-        encoding="linear16",
-    )
-
-    specialist_tts = DeepgramTTSService(
-        api_key=os.getenv("DEEPGRAM_API_KEY"),
-        voice="aura-2-andromeda-en",
         sample_rate=24000,
         encoding="linear16",
     )
@@ -94,16 +84,12 @@ async def main(transport: DailyTransport):
         """
 
         logger.info(f"!!! handle_weather_questions: {query}")
-        # Run in a background thread
-        # (Otherwise the agent blocks the event loop; one effect of that is that we don't hear
-        # "let me check on that" until the agent finishes)
-        # loop = asyncio.get_running_loop()
-        # result = await loop.run_in_executor(None, strands_agent, query)
-        await strands_agent_processor.queue_frame(StrandsAgentRequestFrame(query))
         # This return result isn't "magic"; the LLM is smart enough to interpret it as something
         # to say to the user
         await params.result_callback(
-            {"message": "Tell the user that the specialist will answer the question."}
+            {
+                "message": "Tell the user that you don't have access to a weather API, so to you, the weather is always 75 and sunny."
+            }
         )
 
     llm.register_direct_function(handle_weather_questions)
@@ -112,23 +98,13 @@ async def main(transport: DailyTransport):
     context = OpenAILLMContext(messages, tools)
     context_aggregator = llm.create_context_aggregator(context)
 
-    strands_agent_processor = StrandsAgentProcessor()
-
     pipeline = Pipeline(
         [
-            ParallelPipeline(
-                [
-                    transport.input(),
-                    stt,
-                    context_aggregator.user(),
-                    llm,
-                    main_tts,
-                ],
-                [
-                    strands_agent_processor,
-                    specialist_tts,
-                ],
-            ),
+            transport.input(),
+            stt,
+            context_aggregator.user(),
+            llm,
+            tts,
             transport.output(),
             context_aggregator.assistant(),
         ]

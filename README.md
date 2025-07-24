@@ -1,18 +1,23 @@
-# Pipecat Cloud Starter Project
+# AWS/Deepgram Workshop Demo Project
 
-[![Docs](https://img.shields.io/badge/Documentation-blue)](https://docs.pipecat.daily.co) [![Discord](https://img.shields.io/discord/1217145424381743145)](https://discord.gg/dailyco)
-
-A template voice agent for [Pipecat Cloud](https://www.daily.co/products/pipecat-cloud/) that demonstrates building and deploying a conversational AI agent.
-
-> **For a detailed step-by-step guide, see our [Quickstart Documentation](https://docs.pipecat.daily.co/quickstart).**
+> **For detailed step-by-step guides, see our [Pipecat Quickstart](https://docs.pipecat.ai/getting-started/quickstart) and [Pipecat Cloud Quickstart](https://docs.pipecat.daily.co/quickstart).**
 
 ## Prerequisites
 
+To run the bot locally:
+
 - Python 3.10+
 - Linux, MacOS, or Windows Subsystem for Linux (WSL)
+
+To deploy it to Pipecat Cloud:
+
 - [Docker](https://www.docker.com) and a Docker repository (e.g., [Docker Hub](https://hub.docker.com))
 - A Docker Hub account (or other container registry account)
 - [Pipecat Cloud](https://pipecat.daily.co) account
+
+To run the front-end remotely:
+
+- A Vercel account, or somewhere you can easily deploy a React/Next.js app
 
 > **Note**: If you haven't installed Docker yet, follow the official installation guides for your platform ([Linux](https://docs.docker.com/engine/install/), [Mac](https://docs.docker.com/desktop/setup/install/mac-install/), [Windows](https://docs.docker.com/desktop/setup/install/windows-install/)). For Docker Hub, [create a free account](https://hub.docker.com/signup) and log in via terminal with `docker login`.
 
@@ -20,11 +25,11 @@ A template voice agent for [Pipecat Cloud](https://www.daily.co/products/pipecat
 
 ### 1. Get the starter project
 
-Clone the starter project from GitHub:
+Clone this repo:
 
 ```bash
-git clone https://github.com/daily-co/pipecat-cloud-starter
-cd pipecat-cloud-starter
+git clone https://github.com/daily-co/aws-deepgram-workshop
+cd aws-deepgram-workshop
 ```
 
 ### 2. Set up your Python environment
@@ -50,26 +55,18 @@ pcc auth login
 
 ### 4. Acquire required API keys
 
-This starter requires the following API keys:
-
-- **OpenAI API Key**: Get from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-- **Cartesia API Key**: Get from [play.cartesia.ai/keys](https://play.cartesia.ai/keys)
-- **Daily API Key**: Automatically provided through your Pipecat Cloud account
-
-### 5. Configure to run locally (optional)
-
-You can test your agent locally before deploying to Pipecat Cloud:
+This starter requires the following API keys, which should be provided by the workshop instructor. Rename `env.example` to `.env` and add them:
 
 ```bash
-# Set environment variables with your API keys
-export CARTESIA_API_KEY="your_cartesia_key"
-export DAILY_API_KEY="your_daily_key"
-export OPENAI_API_KEY="your_openai_key"
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+DAILY_API_KEY=
+DEEPGRAM_API_KEY=
 ```
 
-> Your `DAILY_API_KEY` can be found at [https://pipecat.daily.co](https://pipecat.daily.co) under the `Settings` in the `Daily (WebRTC)` tab.
+### 5. Run the agent locally
 
-First install requirements:
+You can test your agent locally before deploying to Pipecat Cloud:
 
 ```bash
 pip install -r requirements.txt
@@ -85,53 +82,43 @@ LOCAL_RUN=1 python bot.py
 
 ### 1. Build and push your Docker image
 
+It's good to do this manually the first time to get a sense of what you're doing.
+
 ```bash
 # Build the image (targeting ARM architecture for cloud deployment)
-docker build --platform=linux/arm64 -t my-first-agent:latest .
+docker build --platform=linux/arm64 -t aws-deepgram-workshop:latest .
 
 # Tag with your Docker username and version
-docker tag my-first-agent:latest your-username/my-first-agent:0.1
+docker tag aws-deepgram-workshop:latest YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.1
 
 # Push to Docker Hub
-docker push your-username/my-first-agent:0.1
+docker push YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.1
 ```
+
+For subsequent builds, you can update the values in `./build.sh` and run it.
 
 ### 2. Create a secret set for your API keys
 
-The starter project requires API keys for OpenAI and Cartesia:
+Your agent needs the keys in your .env file, but _don't_ put the .env file in your Docker image. Instead, create a secret set from your .env file:
 
 ```bash
-# Copy the example env file
-cp env.example .env
-
-# Edit .env to add your API keys:
-# CARTESIA_API_KEY=your_cartesia_key
-# OPENAI_API_KEY=your_openai_key
-
-# Create a secret set from your .env file
-pcc secrets set my-first-agent-secrets --file .env
+pcc secrets set aws-deepgram-workshop-secrets --file .env
 ```
 
 Alternatively, you can create secrets directly via CLI:
 
-```bash
-pcc secrets set my-first-agent-secrets \
-  CARTESIA_API_KEY=your_cartesia_key \
-  OPENAI_API_KEY=your_openai_key
-```
-
 ### 3. Deploy to Pipecat Cloud
 
 ```bash
-pcc deploy my-first-agent your-username/my-first-agent:0.1 --secrets my-first-agent-secrets
+pcc deploy aws-deepgram-workshop YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.1 --secrets aws-deepgram-workshop-secrets
 ```
 
 > **Note (Optional)**: For a more maintainable approach, you can use the included `pcc-deploy.toml` file:
 >
 > ```toml
-> agent_name = "my-first-agent"
-> image = "your-username/my-first-agent:0.1"
-> secret_set = "my-first-agent-secrets"
+> agent_name = "aws-deepgram-workshop"
+> image = "YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.1"
+> secret_set = "aws-deepgram-workshop-secrets"
 >
 > [scaling]
 >     min_instances = 0
@@ -146,7 +133,7 @@ pcc deploy my-first-agent your-username/my-first-agent:0.1 --secrets my-first-ag
 > pcc secrets image-pull-secret pull-secret https://index.docker.io/v1/
 >
 > # Deploy with credentials
-> pcc deploy my-first-agent your-username/my-first-agent:0.1 --credentials pull-secret
+> pcc deploy aws-deepgram-workshop YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.1 --credentials pull-secret
 > ```
 
 ### 4. Check deployment and scaling (optional)
@@ -157,10 +144,10 @@ For more responsive testing, you can scale your deployment to keep a minimum of 
 
 ```bash
 # Ensure at least one warm instance is always available
-pcc deploy my-first-agent your-username/my-first-agent:0.1 --min-instances 1
+pcc deploy  aws-deepgram-workshop YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.1 --min-instances 1
 
 # Check the status of your deployment
-pcc agent status my-first-agent
+pcc agent status aws-deepgram-workshop
 ```
 
 By default, idle instances are maintained for 5 minutes before being terminated when using scale-to-zero.
@@ -179,7 +166,7 @@ pcc organizations keys use
 
 ```bash
 # Start a session with your agent in a Daily room
-pcc agent start my-first-agent --use-daily
+pcc agent start aws-deepgram-workshop --use-daily
 ```
 
 This will return a URL, which you can use to connect to your running agent.
