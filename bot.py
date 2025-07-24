@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD 2-Clause License
 #
 
+import asyncio
 import os
 import sys
 
@@ -26,6 +27,7 @@ from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecatcloud.agent import DailySessionArguments
 
 from strands_agent import StrandsAgentProcessor, StrandsAgentRequestFrame
+from utils import TTSLockAcquireProcessor, TTSLockReleaseProcessor
 
 # Load environment variables
 load_dotenv(override=True)
@@ -73,9 +75,10 @@ async def main(transport: DailyTransport):
         encoding="linear16",
     )
 
+    # To use cross-region inference, use model="us.anthropic.claude-3-5-haiku-20241022-v1:0"
     llm = AWSBedrockLLMService(
         aws_region="us-west-2",
-        model="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        model="anthropic.claude-3-5-haiku-20241022-v1:0",
     )
 
     messages = [
@@ -114,6 +117,17 @@ async def main(transport: DailyTransport):
 
     strands_agent_processor = StrandsAgentProcessor()
 
+    # Create a shared asyncio lock for TTS processors
+    tts_lock = asyncio.Lock()
+
+    # Create lock acquire and release processors for main TTS
+    main_tts_lock_acquire = TTSLockAcquireProcessor(tts_lock)
+    main_tts_lock_release = TTSLockReleaseProcessor(tts_lock)
+
+    # Create lock acquire and release processors for specialist TTS
+    specialist_tts_lock_acquire = TTSLockAcquireProcessor(tts_lock)
+    specialist_tts_lock_release = TTSLockReleaseProcessor(tts_lock)
+
     pipeline = Pipeline(
         [
             ParallelPipeline(
@@ -122,11 +136,15 @@ async def main(transport: DailyTransport):
                     stt,
                     context_aggregator.user(),
                     llm,
+                    main_tts_lock_acquire,
                     main_tts,
+                    main_tts_lock_release,
                 ],
                 [
                     strands_agent_processor,
+                    specialist_tts_lock_acquire,
                     specialist_tts,
+                    specialist_tts_lock_release,
                 ],
             ),
             transport.output(),
