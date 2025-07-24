@@ -5,23 +5,28 @@
 #
 
 import os
+import sys
 
 import aiohttp
 from dotenv import load_dotenv
 from loguru import logger
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import LLMMessagesFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
-from pipecat.services.cartesia.tts import CartesiaTTSService
-from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.services.aws.llm import AWSBedrockLLMService
+from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
+from pipecat.services.deepgram.tts import DeepgramTTSService
+from pipecat.services.llm_service import FunctionCallParams
+from pipecat.transcriptions.language import Language
 from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecatcloud.agent import DailySessionArguments
 
 # Load environment variables
 load_dotenv(override=True)
+logger.add(sys.stderr, level="DEBUG")
 
 # Check if we're in local development mode
 LOCAL_RUN = os.getenv("LOCAL_RUN")
@@ -32,7 +37,9 @@ if LOCAL_RUN:
     try:
         from local_runner import configure
     except ImportError:
-        logger.error("Could not import local_runner module. Local development mode may not work.")
+        logger.error(
+            "Could not import local_runner module. Local development mode may not work."
+        )
 
 
 async def main(transport: DailyTransport):
@@ -41,25 +48,60 @@ async def main(transport: DailyTransport):
     Args:
         transport: The DailyTransport instance
     """
-    tts = CartesiaTTSService(
-        api_key=os.getenv("CARTESIA_API_KEY"), voice_id="71a7ad14-091c-4e8e-a314-022ece01c121"
+
+    stt = DeepgramSTTService(
+        api_key=os.getenv("DEEPGRAM_API_KEY"),
+        live_options=LiveOptions(
+            model="nova-3-general", language=Language.EN, smart_format=True
+        ),
     )
 
-    llm = OpenAILLMService(api_key=os.getenv("OPENAI_API_KEY"), model="gpt-4o")
+    tts = DeepgramTTSService(
+        api_key=os.getenv("DEEPGRAM_API_KEY"),
+        voice="aura-2-arcas-en",
+        sample_rate=24000,
+        encoding="linear16",
+    )
+
+    llm = AWSBedrockLLMService(
+        aws_region="us-west-2",
+        model="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+    )
 
     messages = [
         {
             "role": "system",
-            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way.",
+            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way. Keep your responses VERY BRIEF. Brevity is the soul of wit. When making function calls, respond with only the function call block and no explanatory text, commentary, or narration. Do not announce what you're doing or explain why you're calling the function. Just say exactly this: 'one sec'.",
         },
     ]
 
-    context = OpenAILLMContext(messages)
+    async def handle_weather_questions(params: FunctionCallParams, query: str):
+        """
+        Call this function if the user asks a question about the weather.
+
+        Args:
+            query (str): The user's query, e.g. "What's the weather where the Golden Gate Bridge is?".
+        """
+
+        logger.info(f"!!! handle_weather_questions: {query}")
+        # This return result isn't "magic"; the LLM is smart enough to interpret it as something
+        # to say to the user
+        await params.result_callback(
+            {
+                "message": "Tell the user that you don't have access to a weather API, so to you, the weather is always 75 and sunny."
+            }
+        )
+
+    llm.register_direct_function(handle_weather_questions)
+    tools = ToolsSchema(standard_tools=[handle_weather_questions])
+
+    context = OpenAILLMContext(messages, tools)
     context_aggregator = llm.create_context_aggregator(context)
 
     pipeline = Pipeline(
         [
             transport.input(),
+            stt,
             context_aggregator.user(),
             llm,
             tts,
@@ -82,14 +124,14 @@ async def main(transport: DailyTransport):
     async def on_first_participant_joined(transport, participant):
         logger.info("First participant joined: {}", participant["id"])
         await transport.capture_participant_transcription(participant["id"])
-        # Kick off the conversation.
+        # Kick off the conversation. Claude wants a user frame first.
         messages.append(
             {
-                "role": "system",
-                "content": "Please start with 'Hello World' and introduce yourself to the user.",
+                "role": "user",
+                "content": "Please say exactly this: 'Hello World! What can I do for you?'",
             }
         )
-        await task.queue_frames([LLMMessagesFrame(messages)])
+        await task.queue_frames([context_aggregator.user().get_context_frame()])
 
     @transport.event_handler("on_participant_left")
     async def on_participant_left(transport, participant, reason):
@@ -119,7 +161,7 @@ async def bot(args: DailySessionArguments):
         DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            transcription_enabled=True,
+            enable_transcription=False,
             vad_analyzer=SileroVADAnalyzer(),
         ),
     )
