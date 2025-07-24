@@ -2,7 +2,7 @@
 set -e
 
 VERSION="0.1"
-DOCKER_USERNAME="your_dockerhub_username"
+DOCKER_USERNAME="YOUR_DOCKERHUB_USERNAME"
 AGENT_NAME="aws-deepgram-workshop"
 
 # Build the Docker image with the correct context

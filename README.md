@@ -109,32 +109,17 @@ Alternatively, you can create secrets directly via CLI:
 
 ### 3. Deploy to Pipecat Cloud
 
+**Note**: Pipecat Cloud will soon require credentials for all image pulls. To prepare for this, create a pull secret:
+
 ```bash
-pcc deploy aws-deepgram-workshop YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.1 --secrets aws-deepgram-workshop-secrets
+pcc secrets image-pull-secret pull-secret https://index.docker.io/v1/
 ```
 
-> **Note (Optional)**: For a more maintainable approach, you can use the included `pcc-deploy.toml` file:
->
-> ```toml
-> agent_name = "aws-deepgram-workshop"
-> image = "YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.1"
-> secret_set = "aws-deepgram-workshop-secrets"
->
-> [scaling]
->     min_instances = 0
-> ```
->
-> Then simply run `pcc deploy` without additional arguments.
+You can deploy with command-line options, but this repo already contains a `pcc_deploy.toml` file that you can use to deploy. Edit that file to set your image and credentials, then run:
 
-> **Note**: If your repository is private, you'll need to add credentials:
->
-> ```bash
-> # Create pull secret (you’ll be prompted for credentials)
-> pcc secrets image-pull-secret pull-secret https://index.docker.io/v1/
->
-> # Deploy with credentials
-> pcc deploy aws-deepgram-workshop YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.1 --credentials pull-secret
-> ```
+```bash
+pcc deploy
+```
 
 ### 4. Check deployment and scaling (optional)
 
@@ -151,16 +136,6 @@ pcc agent status aws-deepgram-workshop
 ```
 
 By default, idle instances are maintained for 5 minutes before being terminated when using scale-to-zero.
-
-### 5. Create an API key
-
-```bash
-# Create a public API key for accessing your agent
-pcc organizations keys create
-
-# Set it as the default key to use with your agent
-pcc organizations keys use
-```
 
 ### 6. Start your agent
 
