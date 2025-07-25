@@ -65,7 +65,7 @@ async def main(transport: DailyTransport):
 
     llm = AWSBedrockLLMService(
         aws_region="us-west-2",
-        model="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        model="anthropic.claude-3-5-haiku-20241022-v1:0",
     )
 
     messages = [
