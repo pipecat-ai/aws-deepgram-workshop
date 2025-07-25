@@ -81,6 +81,7 @@ async def main(transport: BaseTransport, _: argparse.Namespace, handle_sigint: b
     llm = AWSBedrockLLMService(
         aws_region="us-west-2",
         model="anthropic.claude-3-5-haiku-20241022-v1:0",
+        params=AWSBedrockLLMService.InputParams(temperature=0.8, latency="optimized"),
     )
 
     messages = [
