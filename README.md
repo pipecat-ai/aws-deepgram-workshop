@@ -3,7 +3,8 @@
 **TLDR:**
 
 TKTKTK AWS and Deepgram links
-**AWS credentials can be found [here](#). Sign up for a Deepgram account [here](#). Rename `bot-basic.py` or `bot-advanced.py` to `bot.py` and fill in the environment variables.**
+
+**AWS credentials can be found [here](#). Sign up for a Deepgram account [here](https://console.deepgram.com/signup?jump=keys). Rename `bot-basic.py` or `bot-advanced.py` to `bot.py` and fill in the environment variables.**
 
 > **For detailed step-by-step guides, see our [Pipecat Quickstart](https://docs.pipecat.ai/getting-started/quickstart) and [Pipecat Cloud Quickstart](https://docs.pipecat.daily.co/quickstart).**
 
@@ -57,7 +58,7 @@ pip install pipecatcloud
 ### 3. Acquire required API keys
 
 TKTKTK AWS and Deepgram links
-This starter requires API keys for AWS and Deepgram. AWS credentials can be found [here](#). Sign up for a Deepgram account [here](#). Rename `env.example` to `.env` and add keys:
+This starter requires API keys for AWS and Deepgram. AWS credentials can be found [here](#). Sign up for a Deepgram account [here](https://console.deepgram.com/signup?jump=keys) to get your own Deepgram API key. Rename `env.example` to `.env` and add keys:
 
 ```bash
 AWS_ACCESS_KEY_ID=
