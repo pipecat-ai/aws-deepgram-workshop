@@ -1,5 +1,9 @@
 # AWS/Deepgram Workshop Demo Project
 
+**TLDR:**
+
+**AWS credentials can be found [here](#). Sign up for a Deepgram account [here](#). Rename `bot-basic.py` or `bot-advanced.py` to `bot.py` and fill in the environment variables.**
+
 > **For detailed step-by-step guides, see our [Pipecat Quickstart](https://docs.pipecat.ai/getting-started/quickstart) and [Pipecat Cloud Quickstart](https://docs.pipecat.daily.co/quickstart).**
 
 ## Prerequisites

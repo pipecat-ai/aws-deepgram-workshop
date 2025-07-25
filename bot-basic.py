@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD 2-Clause License
 #
 
+import argparse
 import os
 import sys
 
@@ -21,6 +22,7 @@ from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
 from pipecat.services.deepgram.tts import DeepgramTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transcriptions.language import Language
+from pipecat.transports.base import BaseTransport
 from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecatcloud.agent import DailySessionArguments
 
@@ -42,7 +44,7 @@ if LOCAL_RUN:
         )
 
 
-async def main(transport: DailyTransport):
+async def main(transport: BaseTransport, _: argparse.Namespace, handle_sigint: bool):
     """Main pipeline setup and execution function.
 
     Args:
@@ -167,7 +169,7 @@ async def bot(args: DailySessionArguments):
     )
 
     try:
-        await main(transport)
+        await main(transport, args, False)
         logger.info("Bot process completed")
     except Exception as e:
         logger.exception(f"Error in bot process: {str(e)}")
@@ -196,7 +198,7 @@ async def local_daily():
             logger.warning(f"Talk to your voice agent here: {room_url}")
             webbrowser.open(room_url)
 
-            await main(transport)
+            await main(transport, args, False)
     except Exception as e:
         logger.exception(f"Error in local development mode: {e}")
 
@@ -207,3 +209,7 @@ if LOCAL_RUN and __name__ == "__main__":
         asyncio.run(local_daily())
     except Exception as e:
         logger.exception(f"Failed to run in local mode: {e}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
