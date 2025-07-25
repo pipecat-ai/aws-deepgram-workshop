@@ -4,11 +4,6 @@
 # SPDX-License-Identifier: BSD 2-Clause License
 #
 
-<<<<<<<< HEAD:bot-basic.py
-import argparse
-========
-import asyncio
->>>>>>>> cb/add-strands-specialist:bot-advanced.py
 import os
 import sys
 
@@ -17,7 +12,6 @@ from dotenv import load_dotenv
 from loguru import logger
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -27,12 +21,8 @@ from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
 from pipecat.services.deepgram.tts import DeepgramTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transcriptions.language import Language
-from pipecat.transports.base import BaseTransport
 from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecatcloud.agent import DailySessionArguments
-
-from strands_agent import StrandsAgentProcessor, StrandsAgentRequestFrame
-from utils import TTSLockAcquireProcessor, TTSLockReleaseProcessor
 
 # Load environment variables
 load_dotenv(override=True)
@@ -52,7 +42,7 @@ if LOCAL_RUN:
         )
 
 
-async def main(transport: BaseTransport, _: argparse.Namespace, handle_sigint: bool):
+async def main(transport: DailyTransport):
     """Main pipeline setup and execution function.
 
     Args:
@@ -66,24 +56,16 @@ async def main(transport: BaseTransport, _: argparse.Namespace, handle_sigint: b
         ),
     )
 
-    main_tts = DeepgramTTSService(
+    tts = DeepgramTTSService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         voice="aura-2-arcas-en",
         sample_rate=24000,
         encoding="linear16",
     )
 
-    specialist_tts = DeepgramTTSService(
-        api_key=os.getenv("DEEPGRAM_API_KEY"),
-        voice="aura-2-andromeda-en",
-        sample_rate=24000,
-        encoding="linear16",
-    )
-
-    # To use cross-region inference, use model="us.anthropic.claude-3-5-haiku-20241022-v1:0"
     llm = AWSBedrockLLMService(
         aws_region="us-west-2",
-        model="anthropic.claude-3-5-haiku-20241022-v1:0",
+        model="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
     )
 
     messages = [
@@ -102,16 +84,12 @@ async def main(transport: BaseTransport, _: argparse.Namespace, handle_sigint: b
         """
 
         logger.info(f"!!! handle_weather_questions: {query}")
-        # Run in a background thread
-        # (Otherwise the agent blocks the event loop; one effect of that is that we don't hear
-        # "let me check on that" until the agent finishes)
-        # loop = asyncio.get_running_loop()
-        # result = await loop.run_in_executor(None, strands_agent, query)
-        await strands_agent_processor.queue_frame(StrandsAgentRequestFrame(query))
         # This return result isn't "magic"; the LLM is smart enough to interpret it as something
         # to say to the user
         await params.result_callback(
-            {"message": "Tell the user that the specialist will answer the question."}
+            {
+                "message": "Tell the user that you don't have access to a weather API, so to you, the weather is always 75 and sunny."
+            }
         )
 
     llm.register_direct_function(handle_weather_questions)
@@ -120,38 +98,13 @@ async def main(transport: BaseTransport, _: argparse.Namespace, handle_sigint: b
     context = OpenAILLMContext(messages, tools)
     context_aggregator = llm.create_context_aggregator(context)
 
-    strands_agent_processor = StrandsAgentProcessor()
-
-    # Create a shared asyncio lock for TTS processors
-    tts_lock = asyncio.Lock()
-
-    # Create lock acquire and release processors for main TTS
-    main_tts_lock_acquire = TTSLockAcquireProcessor(tts_lock)
-    main_tts_lock_release = TTSLockReleaseProcessor(tts_lock)
-
-    # Create lock acquire and release processors for specialist TTS
-    specialist_tts_lock_acquire = TTSLockAcquireProcessor(tts_lock)
-    specialist_tts_lock_release = TTSLockReleaseProcessor(tts_lock)
-
     pipeline = Pipeline(
         [
-            ParallelPipeline(
-                [
-                    transport.input(),
-                    stt,
-                    context_aggregator.user(),
-                    llm,
-                    main_tts_lock_acquire,
-                    main_tts,
-                    main_tts_lock_release,
-                ],
-                [
-                    strands_agent_processor,
-                    specialist_tts_lock_acquire,
-                    specialist_tts,
-                    specialist_tts_lock_release,
-                ],
-            ),
+            transport.input(),
+            stt,
+            context_aggregator.user(),
+            llm,
+            tts,
             transport.output(),
             context_aggregator.assistant(),
         ]
@@ -214,7 +167,7 @@ async def bot(args: DailySessionArguments):
     )
 
     try:
-        await main(transport, args, False)
+        await main(transport)
         logger.info("Bot process completed")
     except Exception as e:
         logger.exception(f"Error in bot process: {str(e)}")
@@ -243,7 +196,7 @@ async def local_daily():
             logger.warning(f"Talk to your voice agent here: {room_url}")
             webbrowser.open(room_url)
 
-            await main(transport, args, False)
+            await main(transport)
     except Exception as e:
         logger.exception(f"Error in local development mode: {e}")
 
@@ -254,7 +207,3 @@ if LOCAL_RUN and __name__ == "__main__":
         asyncio.run(local_daily())
     except Exception as e:
         logger.exception(f"Failed to run in local mode: {e}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

@@ -4,11 +4,8 @@
 # SPDX-License-Identifier: BSD 2-Clause License
 #
 
-<<<<<<<< HEAD:bot-basic.py
 import argparse
-========
 import asyncio
->>>>>>>> cb/add-strands-specialist:bot-advanced.py
 import os
 import sys
 
