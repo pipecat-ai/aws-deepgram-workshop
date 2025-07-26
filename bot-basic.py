@@ -5,9 +5,7 @@
 #
 
 import os
-import sys
 
-import aiohttp
 from dotenv import load_dotenv
 from loguru import logger
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
@@ -16,33 +14,18 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.processors.frameworks.rtvi import RTVIConfig, RTVIObserver, RTVIProcessor
 from pipecat.services.aws.llm import AWSBedrockLLMService
 from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
 from pipecat.services.deepgram.tts import DeepgramTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transcriptions.language import Language
-from pipecat.transports.services.daily import DailyParams, DailyTransport
-from pipecatcloud.agent import DailySessionArguments
 
 # Load environment variables
 load_dotenv(override=True)
-logger.add(sys.stderr, level="DEBUG")
-
-# Check if we're in local development mode
-LOCAL_RUN = os.getenv("LOCAL_RUN")
-if LOCAL_RUN:
-    import asyncio
-    import webbrowser
-
-    try:
-        from local_runner import configure
-    except ImportError:
-        logger.error(
-            "Could not import local_runner module. Local development mode may not work."
-        )
 
 
-async def main(transport: DailyTransport):
+async def run_bot_logic(transport, handle_sigint: bool = True):
     """Main pipeline setup and execution function.
 
     Args:
@@ -67,6 +50,8 @@ async def main(transport: DailyTransport):
         aws_region="us-west-2",
         model="anthropic.claude-3-5-haiku-20241022-v1:0",
     )
+
+    rtvi = RTVIProcessor(config=RTVIConfig(config=[]))
 
     messages = [
         {
@@ -101,6 +86,7 @@ async def main(transport: DailyTransport):
     pipeline = Pipeline(
         [
             transport.input(),
+            rtvi,
             stt,
             context_aggregator.user(),
             llm,
@@ -117,13 +103,14 @@ async def main(transport: DailyTransport):
             enable_metrics=True,
             enable_usage_metrics=True,
             report_only_initial_ttfb=True,
+            observers=[RTVIObserver(rtvi)],
         ),
     )
 
-    @transport.event_handler("on_first_participant_joined")
-    async def on_first_participant_joined(transport, participant):
-        logger.info("First participant joined: {}", participant["id"])
-        await transport.capture_participant_transcription(participant["id"])
+    @transport.event_handler("on_client_connected")
+    async def on_client_connected(transport, participant):
+        logger.info("First participant joined: {}", participant)
+        # await transport.capture_participant_transcription(participant["id"])
         # Kick off the conversation. Claude wants a user frame first.
         messages.append(
             {
@@ -133,77 +120,111 @@ async def main(transport: DailyTransport):
         )
         await task.queue_frames([context_aggregator.user().get_context_frame()])
 
-    @transport.event_handler("on_participant_left")
-    async def on_participant_left(transport, participant, reason):
+    @transport.event_handler("on_client_disconnected")
+    async def on_client_disconnected(transport, participant):
         logger.info("Participant left: {}", participant)
         await task.cancel()
 
-    runner = PipelineRunner(handle_sigint=False, force_gc=True)
+    runner = PipelineRunner(handle_sigint=handle_sigint, force_gc=True)
 
     await runner.run(task)
 
 
-async def bot(args: DailySessionArguments):
-    """Main bot entry point compatible with the FastAPI route handler.
+async def bot(session_args):
+    """Main bot entry point compatible with Pipecat Cloud."""
 
-    Args:
-        room_url: The Daily room URL
-        token: The Daily room token
-        body: The configuration object from the request body
-        session_id: The session ID for logging
-    """
-    logger.info(f"Bot process initialized {args.room_url} {args.token}")
+    # Get handle_sigint from session_args, default to True for Daily
+    handle_sigint = getattr(session_args, "handle_sigint", True)
 
-    transport = DailyTransport(
-        args.room_url,
-        args.token,
-        "Pipecat Bot",
-        DailyParams(
+    if hasattr(session_args, "room_url") and hasattr(session_args, "token"):
+        # Daily session arguments (cloud or local)
+        from pipecat.transports.services.daily import DailyParams, DailyTransport
+
+        transport = DailyTransport(
+            session_args.room_url,
+            session_args.token,
+            "Pipecat Bot",
+            params=DailyParams(
+                audio_in_enabled=True,
+                audio_out_enabled=True,
+                vad_analyzer=SileroVADAnalyzer(),
+            ),
+        )
+
+    elif hasattr(session_args, "webrtc_connection"):
+        # WebRTC session arguments (local only, created by server.py)
+        from pipecat.transports.base_transport import TransportParams
+        from pipecat.transports.network.small_webrtc import SmallWebRTCTransport
+
+        transport = SmallWebRTCTransport(
+            params=TransportParams(
+                audio_in_enabled=True,
+                audio_out_enabled=True,
+                vad_analyzer=SileroVADAnalyzer(),
+            ),
+            webrtc_connection=session_args.webrtc_connection,
+        )
+
+    elif hasattr(session_args, "websocket"):
+        # WebSocket session arguments (for telephony providers)
+        from pipecat.transports.network.fastapi_websocket import (
+            FastAPIWebsocketParams,
+            FastAPIWebsocketTransport,
+        )
+
+        # Create appropriate serializer based on transport type
+        params = FastAPIWebsocketParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            enable_transcription=False,
             vad_analyzer=SileroVADAnalyzer(),
-        ),
-    )
+            add_wav_header=False,
+        )
 
-    try:
-        await main(transport)
-        logger.info("Bot process completed")
-    except Exception as e:
-        logger.exception(f"Error in bot process: {str(e)}")
-        raise
+        if session_args.transport_type == "twilio":
+            from pipecat.serializers.twilio import TwilioFrameSerializer
 
+            call_info = session_args.call_info
+            params.serializer = TwilioFrameSerializer(
+                stream_sid=call_info["stream_sid"],
+                call_sid=call_info["call_sid"],
+                account_sid=os.getenv("TWILIO_ACCOUNT_SID", ""),
+                auth_token=os.getenv("TWILIO_AUTH_TOKEN", ""),
+            )
+        elif session_args.transport_type == "telnyx":
+            from pipecat.serializers.telnyx import TelnyxFrameSerializer
 
-# Local development
-async def local_daily():
-    """Daily transport for local development."""
+            call_info = session_args.call_info
+            params.serializer = TelnyxFrameSerializer(
+                stream_id=call_info["stream_id"],
+                call_control_id=call_info["call_control_id"],
+                outbound_encoding=call_info["outbound_encoding"],
+                inbound_encoding="PCMU",
+            )
+        elif session_args.transport_type == "plivo":
+            from pipecat.serializers.plivo import PlivoFrameSerializer
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            (room_url, token) = await configure(session)
-            transport = DailyTransport(
-                room_url,
-                token,
-                "Pipecat Local Bot",
-                params=DailyParams(
-                    audio_in_enabled=True,
-                    audio_out_enabled=True,
-                    transcription_enabled=True,
-                    vad_analyzer=SileroVADAnalyzer(),
-                ),
+            call_info = session_args.call_info
+            params.serializer = PlivoFrameSerializer(
+                stream_id=call_info["stream_id"],
+                call_id=call_info["call_id"],
+            )
+        else:
+            raise ValueError(
+                f"Unsupported WebSocket transport type: {session_args.transport_type}"
             )
 
-            logger.warning(f"Talk to your voice agent here: {room_url}")
-            webbrowser.open(room_url)
+        transport = FastAPIWebsocketTransport(
+            websocket=session_args.websocket, params=params
+        )
 
-            await main(transport)
-    except Exception as e:
-        logger.exception(f"Error in local development mode: {e}")
+    else:
+        raise ValueError(f"Unknown session arguments: {session_args}")
+
+    await run_bot_logic(transport, handle_sigint)
 
 
 # Local development entry point
-if LOCAL_RUN and __name__ == "__main__":
-    try:
-        asyncio.run(local_daily())
-    except Exception as e:
-        logger.exception(f"Failed to run in local mode: {e}")
+if __name__ == "__main__":
+    from lib.cloud import main
+
+    main()

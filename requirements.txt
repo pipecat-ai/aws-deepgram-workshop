@@ -1,4 +1,5 @@
 pipecatcloud
-pipecat-ai[aws,daily,deepgram,silero]
+pipecat-ai[aws,daily,deepgram,openai,silero,webrtc,websocket]
+pipecat-ai-small-webrtc-prebuilt
 python-dotenv~=1.0.1
 strands-agents

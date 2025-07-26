@@ -4,7 +4,7 @@
 
 TKTKTK AWS and Deepgram links
 
-**AWS credentials can be found [here](#). Sign up for a Deepgram account [here](https://console.deepgram.com/signup?jump=keys). Rename `bot-basic.py` or `bot-advanced.py` to `bot.py` and fill in the environment variables.**
+**AWS credentials can be found [here](#). Sign up for a Deepgram account [here](https://console.deepgram.com/signup?jump=keys). Rename `example.env` to `.env` and fill in the environment variables. For the advanced bot, edit the Dockerfile to use `bot-advanced.py` instead of `bot-basic.py`.**
 
 > **For detailed step-by-step guides, see our [Pipecat Quickstart](https://docs.pipecat.ai/getting-started/quickstart) and [Pipecat Cloud Quickstart](https://docs.pipecat.daily.co/quickstart).**
 
@@ -80,6 +80,10 @@ mv bot-basic.py bot.py
 # or
 mv bot-advanced.py bot.py
 ```
+
+You can also leave the bot file names as-is and rename them when you build your Docker image to deploy to Pipecat Cloud. Pipecat Cloud expects a file named `bot.py`, so just change the last line of the Dockerfile to `COPY ./bot-basic.py bot.py`, for example.
+
+The rest of this guide will assume you're using `bot.py` for your botfile.
 
 ### 5. Run the agent
 
