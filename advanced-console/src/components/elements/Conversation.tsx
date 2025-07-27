@@ -98,6 +98,7 @@ export const Conversation: React.FC<Props> = ({
                   {
                     "vkui:text-blue-500": message.role === "user",
                     "vkui:text-purple-500": message.role === "assistant",
+                    "vkui:text-orange-500": message.role === "specialist",
                   },
                   classNames.role
                 )}

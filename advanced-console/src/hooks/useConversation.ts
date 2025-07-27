@@ -290,19 +290,21 @@ export const useConversation = ({ onMessageAdded }: Props = {}) => {
   // Handle specialist messages from serverMessage events
   useRTVIClientEvent(RTVIEvent.ServerMessage, (data) => {
     const now = new Date();
-    setMessages((prev) => {
-      const newMessage: ConversationMessage = {
-        role: "specialist",
-        content: data.text,
-        final: true,
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      };
-      onMessageAdded?.(newMessage);
-      return [...prev, newMessage]
-        .sort(sortByCreatedAt)
-        .filter(filterEmptyMessages);
-    });
+    if (data["type"] == "specialist-thinking") {
+      setMessages((prev) => {
+        const newMessage: ConversationMessage = {
+          role: "specialist",
+          content: data.message,
+          final: true,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        };
+        onMessageAdded?.(newMessage);
+        return [...prev, newMessage]
+          .sort(sortByCreatedAt)
+          .filter(filterEmptyMessages);
+      });
+    }
   });
 
   return {
