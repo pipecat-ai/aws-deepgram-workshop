@@ -54,6 +54,14 @@ class StrandsAgentProcessor(FrameProcessor):
             loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(None, self.agent, frame.text)
             logger.info(f"!!! agent result: {result}")
+            await self.push_frame(
+                RTVIServerMessageFrame(
+                    data={
+                        "type": "specialist-talking",
+                        "message": result.message["content"][0]["text"],
+                    }
+                )
+            )
             await self.push_frame(TTSSpeakFrame(result.message["content"][0]["text"]))
 
         else:

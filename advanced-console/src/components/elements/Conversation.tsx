@@ -98,7 +98,9 @@ export const Conversation: React.FC<Props> = ({
                   {
                     "vkui:text-blue-500": message.role === "user",
                     "vkui:text-purple-500": message.role === "assistant",
-                    "vkui:text-orange-500": message.role === "specialist",
+                    "vkui:text-orange-500":
+                      message.role === "specialist (thinking)",
+                    "vkui:text-green-500": message.role === "specialist",
                   },
                   classNames.role
                 )}
@@ -108,7 +110,10 @@ export const Conversation: React.FC<Props> = ({
               <div
                 className={cn(
                   "vkui:flex vkui:flex-col vkui:gap-2",
-                  classNames.messageContent
+                  classNames.messageContent,
+                  message.role === "specialist (thinking)"
+                    ? "vkui:font-mono vkui:text-xs vkui:text-gray-500"
+                    : ""
                 )}
               >
                 {message.content || (

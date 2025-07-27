@@ -3,7 +3,7 @@ import { useRTVIClientEvent } from "@pipecat-ai/client-react";
 import { useRef, useState } from "react";
 
 interface ConversationMessage {
-  role: "user" | "assistant" | "specialist";
+  role: "user" | "assistant" | "specialist (thinking)" | "specialist";
   content: string;
   final?: boolean;
   createdAt: string;
@@ -291,6 +291,21 @@ export const useConversation = ({ onMessageAdded }: Props = {}) => {
   useRTVIClientEvent(RTVIEvent.ServerMessage, (data) => {
     const now = new Date();
     if (data["type"] == "specialist-thinking") {
+      setMessages((prev) => {
+        const newMessage: ConversationMessage = {
+          role: "specialist (thinking)",
+          content: data.message,
+          final: true,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        };
+        onMessageAdded?.(newMessage);
+        return [...prev, newMessage]
+          .sort(sortByCreatedAt)
+          .filter(filterEmptyMessages);
+      });
+    }
+    if (data["type"] == "specialist-talking") {
       setMessages((prev) => {
         const newMessage: ConversationMessage = {
           role: "specialist",
