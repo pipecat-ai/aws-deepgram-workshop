@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from loguru import logger
 from pipecat.frames.frames import Frame, TextFrame, TTSSpeakFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
 from strands import Agent, tool
 from strands.models import BedrockModel
 
@@ -121,5 +122,10 @@ class StrandsAgentProcessor(FrameProcessor):
     async def process_strands_messages(self):
         while True:
             message = await self._strands_messages_queue.get()
-            await self.push_frame(StrandsThinkingTextFrame(message))
+            # await self.push_frame(StrandsThinkingTextFrame(message))
+            await self.push_frame(
+                RTVIServerMessageFrame(
+                    data={"type": "specialist-thinking", "message": message}
+                )
+            )
             self._strands_messages_queue.task_done()
