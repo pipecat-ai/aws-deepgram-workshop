@@ -93,6 +93,3 @@ cython_debug/
 # Pipecat cloud
 .pcc-deploy.toml
 
-# CB: For last-minute testing
-Dockerfile
-build.sh

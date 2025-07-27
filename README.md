@@ -87,15 +87,17 @@ The rest of this guide will assume you're using `bot.py` for your botfile.
 
 ### 5. Run the agent
 
-TKTKTK update this with the SmallWebRTC runner.
+You can run the bot locally using the SmallWebRTC transport:
 
 ```bash
 python bot.py
 ```
 
+When it's running, open a browser to `http://localhost:7860` to interact with the bot using the console from the new [Pipecat Voice UI Kit](https://github.com/pipecat-ai/voice-ui-kit). You can customize this UI later in the workshop if you want.
+
 ## Part 2: Deploy to Pipecat Cloud
 
-Next, you'll deploy your bot to Pipecat Cloud. You'll be able to talk to your bot in a browser using the Daily WebRTC transport. If you have a Twilio phone number, you can also configure your bot to receive calls from your phone.
+Next, you'll deploy your bot to Pipecat Cloud. You'll be able to talk to your bot in a browser using the Daily WebRTC transport. If you have a Twilio phone number, you can also configure your bot to receive calls from your phone using the Twilio transport.
 
 ### 1. Build and push your Docker image
 
@@ -150,11 +152,19 @@ pcc deploy
 pcc agent start aws-deepgram-workshop --use-daily
 ```
 
-This will return a URL, which you can use to connect to your running agent. TKTKTK add Twilio instructions here
+This will return a URL, which will open a Daily Prebuilt room that you can use to interact with your running agent.
 
-## Part 3: Build a custom UI
+To set up Twilio integration, follow the [Pipecat Cloud instructions here](https://docs.pipecat.daily.co/pipecat-in-production/telephony/twilio-mediastreams#twilio-setup) for the Twilio configuration. Your botfile should already have the needed configuration for the Twilio transport.
 
-TKTKTK
+## Part 3 (Optional): Customize the UI
+
+There's a new Pipecat front-end library you can use to build your own custom UI. Check out the [Pipecat Voice UI Kit](https://github.com/pipecat-ai/voice-ui-kit) to learn more about it!
+
+This repo also contains a partial implementation of a custom UI in the `advanced-console` directory. (We're still working out some of the export details from voice-ui-kit, so there's some duplicated code to manage imports.) You can `cd advanced-console; npm i; npm run dev` to run it locally.
+
+It features some light customization to display the Specialist's 'thinking' and speech. Search "specialist" in the code to see the relevant components.
+
+You can run this UI locally and connect to an agent that's also running locally using the SmallWebRTCTransport. Instructions for pointing this UI at an agent running on Pipecat Cloud are coming soon.
 
 ## Part 4: What's next?
 
