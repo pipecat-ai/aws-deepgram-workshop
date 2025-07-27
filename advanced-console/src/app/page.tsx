@@ -1,10 +1,8 @@
 "use client";
 
-import {
-  ConsoleTemplate,
-  FullScreenContainer,
-  ThemeProvider,
-} from "@pipecat-ai/voice-ui-kit";
+import { FullScreenContainer, ThemeProvider } from "@pipecat-ai/voice-ui-kit";
+
+import { ConsoleTemplate } from "@/templates/Console";
 
 export default function Home() {
   return (
