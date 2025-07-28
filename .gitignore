@@ -11,8 +11,6 @@ dist/
 .installed.cfg
 .eggs/
 downloads/
-lib/
-lib64/
 parts/
 sdist/
 var/
