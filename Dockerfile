@@ -10,4 +10,4 @@ RUN mkdir -p lib
 COPY ./lib/cloud.py lib/cloud.py
 COPY ./lib/daily.py lib/daily.py
 COPY ./lib/runner_utils.py lib/runner_utils.py
-COPY ./bot-advanced.py bot.py
+COPY ./bot.py bot.py
