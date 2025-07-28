@@ -68,8 +68,6 @@ If you're new to Pipecat, start with the `basic` bot. It features a straightforw
 
 The `advanced` bot has a parallel pipeline that's running a [Strands agent](https://strandsagents.com/latest/), which can do more in-depth thinking and reasoning. The main LLM pipeline uses function calling to delegate certain questions to the Strands agent.
 
-The rest of this guide will use `bot.py` in , so adjust the commands as needed (ie `python bot-basic.py` or `python bot-advanced.py`).
-
 ### 5. Run the agent
 
 Run the bot locally using the SmallWebRTC transport:
