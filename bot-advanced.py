@@ -64,10 +64,12 @@ async def run_bot(transport, handle_sigint: bool = True):
     )
 
     # To use cross-region inference, use model="us.anthropic.claude-3-5-haiku-20241022-v1:0"
+
     llm = AWSBedrockLLMService(
         name="MainLLM",
         aws_region="us-west-2",
         model="anthropic.claude-3-5-haiku-20241022-v1:0",
+        # model="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
         # params=AWSBedrockLLMService.InputParams(temperature=0.8, latency="optimized"),
     )
 
@@ -76,7 +78,7 @@ async def run_bot(transport, handle_sigint: bool = True):
     messages = [
         {
             "role": "system",
-            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way. Keep your responses VERY BRIEF. Brevity is the soul of wit. When making function calls, respond with only the function call block and no explanatory text, commentary, or narration. Do not announce what you're doing or explain why you're calling the function. Just say exactly this: 'one sec'.",
+            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way. Keep your responses VERY BRIEF. Brevity is the soul of wit. When making function calls, respond with only the function call block and no explanatory text, commentary, or narration. Do not announce what you're doing or explain why you're calling the function.",
         },
     ]
 
