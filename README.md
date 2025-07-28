@@ -1,6 +1,6 @@
 # AWS/Deepgram Workshop Demo Project
 
-A Demo Pipecat-ai voice agent using Deepgram and AWS Strands. [Part 1](#part-1) covers how to run the Pipecat voice agent locally. [Part 2](#part-2) explains how to deploy the agent to Pipecat Cloud. There is also an optional [Part 3](#part-3) that covers how to customize the UI.
+A Demo Pipecat-ai voice agent using Deepgram and AWS Strands. [Part 1](#part-1-run-a-voice-agent-locally) covers how to run the Pipecat voice agent locally. [Part 2](#part-2) explains how to deploy the agent to Pipecat Cloud. There is also an optional [Part 3](#part-3) that covers how to customize the UI.
 
 **TLDR:**
 
