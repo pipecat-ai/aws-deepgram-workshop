@@ -43,7 +43,7 @@ pip install -r requirements.txt
 
 ### 3. Acquire required API keys
 
-This starter requires API keys for AWS and Deepgram. 
+This starter requires API keys for AWS and Deepgram.
 
 - [These AWS credentials](https://pastebin.com/wVU3Qhdz) are tied to several different AWS Workshop accounts with rate limiting, so choose a random set from the list.
 
@@ -66,7 +66,7 @@ This workshop has two agents from which to choose: `bot-basic.py` and `bot-advan
 
 If you're new to Pipecat, start with the `basic` bot. It features a straightforward "cascading" pipeline, using Deepgram's speech-to-text, LLM inference with Claude on AWS Bedrock, and Deepgram's text-to-speech service.
 
-The `advanced` bot has a parallel pipeline that's running a [Strands agent](https://strandsagents.com/latest/), which can do more in-depth thinking and reasoning. The main LLM pipeline uses function calling to delegate certain questions to the Strands agent.
+The `advanced` bot has a parallel pipeline that's running a [Strands agent](https://strandsagents.com/latest/), which can do more in-depth thinking and reasoning. The main LLM pipeline uses function calling to delegate certain questions to the Strands agent. The Strands agent function handlers are hard-coded to try and get more consistent behavior. Try asking it "What's the weather at the Golden Gate Bridge?" to ensure that it needs to 'think' about a response.
 
 ### 5. Run the agent
 
@@ -75,7 +75,9 @@ Run the bot locally using the SmallWebRTC transport:
 ```bash
 python bot-basic.py
 ```
-or 
+
+or
+
 ```bash
 python bot-advanced.py
 ```
@@ -102,7 +104,9 @@ Pipecat Cloud expects the main entry to your bot to be called `bot.py`. This is 
 ```bash
 mv bot-basic.py bot.py
 ```
+
 or
+
 ```bash
 mv bot-advanced.py bot.py
 ```
@@ -133,6 +137,7 @@ For subsequent builds, you can update the values in `./build.sh` and run it.
 ```bash
 pcc auth login
 ```
+
 > run `pip install pipecatcloud` if `pcc: command not found`
 
 ### 3. Create a secret set for your API keys
@@ -178,7 +183,7 @@ We're using a new bot() function in these botfiles, and we're still working out 
 
 There's a new Pipecat front-end library you can use to build your own custom UI. Check out the [Pipecat Voice UI Kit](https://github.com/pipecat-ai/voice-ui-kit) to learn more about it!
 
-This repo also contains a partial implementation of a custom UI in the `advanced-console` directory. (We're still working out some of the export details from voice-ui-kit, so there's some duplicated code to manage imports.) 
+This repo also contains a partial implementation of a custom UI in the `advanced-console` directory. (We're still working out some of the export details from voice-ui-kit, so there's some duplicated code to manage imports.)
 To run it locally:
 
 ```bash
