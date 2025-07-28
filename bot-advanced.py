@@ -154,8 +154,8 @@ async def run_bot(transport, handle_sigint: bool = True):
             enable_metrics=True,
             enable_usage_metrics=True,
             report_only_initial_ttfb=True,
-            observers=[RTVIObserver(rtvi)],
         ),
+        observers=[RTVIObserver(rtvi)],
     )
 
     @transport.event_handler("on_client_connected")
