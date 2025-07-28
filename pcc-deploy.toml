@@ -1,5 +1,5 @@
 agent_name = "aws-deepgram-workshop"
-image = "YOUR_DOCKERHUB_USERNAME/aws-deepgram-workshop:0.3"
+image = "chadbailey59/aws-deepgram-workshop:0.6"
 secret_set = "aws-deepgram-workshop-secrets"
 image_credentials = "pull-secret"
 [scaling]

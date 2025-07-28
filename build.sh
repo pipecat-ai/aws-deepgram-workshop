@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="0.2"
+VERSION="0.6"
 DOCKER_USERNAME="chadbailey59"
 AGENT_NAME="aws-deepgram-workshop"
 

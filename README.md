@@ -2,9 +2,7 @@
 
 **TLDR:**
 
-TKTKTK AWS and Deepgram links
-
-**AWS credentials can be found [here](#). Sign up for a Deepgram account [here](https://console.deepgram.com/signup?jump=keys). Rename `example.env` to `.env` and fill in the environment variables. For the advanced bot, edit the Dockerfile to use `bot-advanced.py` instead of `bot-basic.py`.**
+**AWS credentials can be found [here](https://pastebin.com/wVU3Qhdz). Sign up for a Deepgram account [here](https://console.deepgram.com/signup?jump=keys). Rename `example.env` to `.env` and fill in the environment variables. For the advanced bot, edit the Dockerfile to use `bot-advanced.py` instead of `bot-basic.py`.**
 
 > **For detailed step-by-step guides, see our [Pipecat Quickstart](https://docs.pipecat.ai/getting-started/quickstart) and [Pipecat Cloud Quickstart](https://docs.pipecat.daily.co/quickstart).**
 
@@ -57,13 +55,17 @@ pip install pipecatcloud
 
 ### 3. Acquire required API keys
 
-TKTKTK AWS and Deepgram links
-This starter requires API keys for AWS and Deepgram. AWS credentials can be found [here](#). Sign up for a Deepgram account [here](https://console.deepgram.com/signup?jump=keys) to get your own Deepgram API key. Rename `env.example` to `.env` and add keys:
+This starter requires API keys for AWS and Deepgram. AWS credentials can be found [here](https://pastebin.com/wVU3Qhdz). Those credentials are tied to several different AWS Workshop accounts with rate limiting, so choose a random set from the list.
+
+Sign up for a Deepgram account [here](https://console.deepgram.com/signup?jump=keys) to get your own Deepgram API key.
+
+If you already have a Daily account and want to use the Daily transport locally, you can also add your `DAILY_API_KEY` to the .env file. Otherwise, you'll be able to use the Daily transport without a key if you deploy to Pipecat Cloud later in these instructions.
+
+Rename `env.example` to `.env` and add keys:
 
 ```bash
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
-DAILY_API_KEY=
 DEEPGRAM_API_KEY=
 ```
 
@@ -154,7 +156,11 @@ pcc agent start aws-deepgram-workshop --use-daily
 
 This will return a URL, which will open a Daily Prebuilt room that you can use to interact with your running agent.
 
-To set up Twilio integration, follow the [Pipecat Cloud instructions here](https://docs.pipecat.daily.co/pipecat-in-production/telephony/twilio-mediastreams#twilio-setup) for the Twilio configuration. Your botfile should already have the needed configuration for the Twilio transport.
+### 6a. Talk to your bot with a Twilio phone number
+
+To set up Twilio integration, follow the [Pipecat Cloud instructions here](https://docs.pipecat.daily.co/pipecat-in-production/telephony/twilio-mediastreams#twilio-setup) for the Twilio configuration.
+
+We're using a new bot() function in these botfiles, and we're still working out some last-minute issues with Twilio configuration. For now, if you want to use this bot with Twilio on Pipecat Cloud, you can refer to the [Pipecat Cloud Twilio starter](https://github.com/daily-co/pipecat-cloud-images/blob/main/pipecat-starters/twilio/bot.py) for an example of how to set up the botfile.
 
 ## Part 3 (Optional): Customize the UI
 
