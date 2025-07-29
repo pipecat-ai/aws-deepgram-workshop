@@ -156,13 +156,13 @@ pcc secrets set aws-deepgram-workshop-secrets --file .env
 pcc secrets image-pull-secret pull-secret https://index.docker.io/v1/
 ```
 
-Edit `pcc_deploy.toml` to set your image and credentials, then run:
+Edit `pcc-deploy.toml` to set your image and credentials, then run:
 
 ```bash
 pcc deploy
 ```
 
-> You can override `pcc_deploy.toml` values with command-line options. See `pcc deploy --help`.
+> You can override `pcc-deploy.toml` values with command-line options. See `pcc deploy --help`.
 
 ### 6. Start your agent
 
