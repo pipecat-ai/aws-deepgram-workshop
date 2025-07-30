@@ -152,9 +152,7 @@ pcc secrets set aws-deepgram-workshop-secrets --file .env
 
 **Note**: Pipecat Cloud requires credentials for all image pulls. 
 
-**Follow this guide to generate a personal access token for Docker Hub**
-
-[Using private Docker Hub images with Pipecat Cloud](https://docs.pipecat.daily.co/agents/secrets#using-private-docker-hub-images-with-pipecat-cloud
+**Follow this guide to generate a personal access token for Docker Hub**: [Using private Docker Hub images with Pipecat Cloud](https://docs.pipecat.daily.co/agents/secrets#using-private-docker-hub-images-with-pipecat-cloud)
 
 Then create a pull secret. Use the personal access token you created, not your login password.
 
