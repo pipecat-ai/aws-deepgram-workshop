@@ -1,5 +1,3 @@
-# Voice agent with Deepgram, AWS Bedrock, and AWS Strands
-# bedrock_voice_agent.py
 import argparse
 import os
 from datetime import datetime
@@ -36,7 +34,7 @@ from strands.models import BedrockModel
 load_dotenv(override=True)
 
 # Bedrock Knowledge Base Configuration
-KNOWLEDGE_BASE_ID = "STFZ4NQBSR"
+KNOWLEDGE_BASE_ID = os.getenv("KB_ID")
 
 
 class BedrockKnowledgeBaseClient:
@@ -269,7 +267,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         "- If they say 'claim ID 1234', search for 'claim ID 1234' specifically "
         "For general questions not related to specific claims, you can answer directly without using the search function."
         "For claim estimates, costs, amounts, or any other information, always search for that specific information. "
-        "Always provide helpful information about claims when found. "
+        "Keep your responses very brief. Don't add extra information the user didn't ask for. "
         f"{AWSNovaSonicLLMService.AWAIT_TRIGGER_ASSISTANT_RESPONSE_INSTRUCTION}"
     )
 
@@ -278,7 +276,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             {"role": "system", "content": system_instruction},
             {
                 "role": "user",
-                "content": "Hello! I'm ready to help you find information from the knowledge base.",
+                "content": "Start by saying exactly this: 'Thanks for contacting tri-county insurance. How can I help you?",
             },
         ],
         tools=tools,
@@ -314,6 +312,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         logger.info("Client connected to Bedrock Knowledge Base Voice Agent")
         # Kick off the conversation
         await task.queue_frames([LLMRunFrame()])
+        # Trigger the first assistant response
+        #await llm.trigger_assistant_response()
 
     # Handle client disconnection events
     @transport.event_handler("on_client_disconnected")
