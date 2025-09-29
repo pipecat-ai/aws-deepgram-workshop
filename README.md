@@ -472,6 +472,4 @@ With this code at the bottom of the botfile, we can run `python agent.py` from t
 
 ## Deploying to Pipecat Cloud
 
-CB: TKTKTK still working here
-
-When you deploy to Pipecat Cloud, instead of running `python agent.py`, you'll make a REST API request to start a bot session. The Pipecat Cloud infrastructure preloads your botfile and calls the `bot()` function with a different set of `runner_args` to run a bot session in the cloud.
+You can deploy this bot to Pipecat Cloud and get production-ready infrastructure in about 5 minutes. Rename your file from `agent.py` to `bot.py`, then follow the instructions from [the Pipecat Cloud Quickstart](https://github.com/pipecat-ai/pipecat-quickstart?tab=readme-ov-file#step-2-deploy-to-production-5-min)!
