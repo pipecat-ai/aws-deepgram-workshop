@@ -1,0 +1,7 @@
+pipecat-ai[webrtc,daily,silero,aws-nova-sonic,deepgram]==0.0.85
+pipecat-ai-small-webrtc-prebuilt
+python-dotenv
+aioboto3
+
+strands-agents
+strands-agents-tools
