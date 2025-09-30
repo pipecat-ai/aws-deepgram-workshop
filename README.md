@@ -1,4 +1,4 @@
-# Piecat voice agent with Deepgram, AWS Bedrock, AWS Strands, and pg_vector
+# Pipecat voice agent with Deepgram, AWS Bedrock, AWS Strands, and pg_vector
 
 This is the agent code used in the AWS Workshop [Building intelligent voice AI agents with Amazon Nova Sonic, Amazon Bedrock and Pipecat](https://catalog.workshops.aws/voice-ai-agents/en-US). Follow the instructions in that workshop to configure an AWS environment to use with this code.
 
